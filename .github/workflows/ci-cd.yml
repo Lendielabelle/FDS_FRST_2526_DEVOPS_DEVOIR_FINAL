@@ -1,125 +1,71 @@
-# CI/CD Pipeline — Expense Tracker Node.js
-# Niveau débutant: Modules 3-4 (CI/CD Architecture, GitHub Actions)
-# Votre tâche: Compléter ce fichier workflow en remplaçant les ???
-
-# ============================================================================
-# SECTION 1: DÉCLENCHEURS (TRIGGERS)
-# ============================================================================
-[cite_start]name: Expense Tracker CI/CD [cite: 208]
+name: Expense Tracker CI/CD
 
 on:
-  # Déclencheur 1: Quand du code est poussé (push)
   push:
-    [cite_start]branches: [ "main", "feature/*" ] [cite: 208]
-  
-  # Déclencheur 2: Quand une pull request est créée
+    branches: [ "main", "feature/**" ]
   pull_request:
-    [cite_start]branches: [ "main" ] [cite: 208]
+    branches: [ "main" ]
 
-# ============================================================================
-# SECTION 2: JOBS (TRAVAUX)
-# ============================================================================
 jobs:
-
-  # ========================================================================
-  # JOB 1: test-and-build - Tests + Build Docker
-  # ========================================================================
+  # JOB 1: Tests et Build
   test-and-build:
-    [cite_start]runs-on: ubuntu-latest [cite: 208]
-    
+    runs-on: ubuntu-latest
     steps:
-      # ÉTAPE 1: Récupérer le code depuis Git
-      - [cite_start]uses: actions/checkout@v4 [cite: 208]
-      
-      # ÉTAPE 2: Installer Node.js
-      - [cite_start]uses: actions/setup-node@v4 [cite: 208]
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          [cite_start]node-version: 18 [cite: 208]
-          [cite_start]cache: npm [cite: 208]
-      
-      # ÉTAPE 3: Installer les dépendances (DÉTERMINISTE)
-      - [cite_start]run: npm ci [cite: 209]
-      
-      # ÉTAPE 4: Exécuter les tests (Script 'test' dans package.json)
-      - [cite_start]run: npm test [cite: 209]
-  
-  # ========================================================================
-  # JOB 2: dockerfile-verify - Vérifier que le Dockerfile fonctionne
-  # ========================================================================
+          node-version: 18
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  # JOB 2: Vérification Dockerfile
   dockerfile-verify:
-    [cite_start]runs-on: ubuntu-latest [cite: 209]
-    [cite_start]needs: test-and-build [cite: 209]
-    
+    runs-on: ubuntu-latest
+    needs: test-and-build
     steps:
-      - [cite_start]uses: actions/checkout@v4 [cite: 209]
-      
-      # ÉTAPE 1: Construire l'image Docker
+      - uses: actions/checkout@v4
       - name: Build Docker image
-        [cite_start]run: docker build -t expense-tracker:test . [cite: 209]
-      
-      # ÉTAPE 2: Lancer le conteneur en arrière-plan (-d)
+        run: docker build -t expense-tracker:test .
       - name: Start Docker container
-        [cite_start]run: docker run -d --rm -p 3000:3000 --name expense-test expense-tracker:test [cite: 209]
-      
-      # ÉTAPE 3: Attendre que l'app soit prête
+        run: docker run -d --rm -p 3000:3000 --name expense-test expense-tracker:test
       - name: Wait for application startup
-        [cite_start]run: sleep 3 [cite: 210]
-      
-      # ÉTAPE 4: Vérifier que l'application répond (Port 3000, Route /)
+        run: sleep 5
       - name: Verify application is responding
-        [cite_start]run: curl -f http://localhost:3000/ || exit 1 [cite: 210]
-      
-      # ÉTAPE 5: Arrêter le conteneur
+        run: curl -f http://localhost:3000/ || exit 1
       - name: Stop Docker container
-        [cite_start]run: docker stop expense-test [cite: 211]
-    
-  # ========================================================================
-  # JOB 3: docker-compose-verify - Vérifier l'orchestration complète
-  # ========================================================================
+        run: docker stop expense-test
+
+  # JOB 3: Vérification Orchestration
   docker-compose-verify:
-    [cite_start]runs-on: ubuntu-latest [cite: 211]
-    [cite_start]needs: [ test-and-build, dockerfile-verify ] [cite: 211]
-    
+    runs-on: ubuntu-latest
+    needs: [test-and-build, dockerfile-verify]
     env:
-      [cite_start]DB_HOST: db [cite: 211]
-      [cite_start]DB_PORT: 5432 [cite: 211]
-      [cite_start]DB_NAME: ${{ secrets.DB_NAME }} [cite: 211]
-      [cite_start]DB_USER: ${{ secrets.DB_USER }} [cite: 211]
-      [cite_start]DB_PASSWORD: ${{ secrets.DB_PASSWORD }} [cite: 211]
-      [cite_start]NODE_ENV: production [cite: 212]
-    
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      NODE_ENV: production
     steps:
-      - [cite_start]uses: actions/checkout@v4 [cite: 212]
+      - uses: actions/checkout@v4
       
-      # ÉTAPE 1: Vérifier que les secrets GitHub sont configurés
-      - name: 🔍 Verify GitHub Secrets are configured
-        env:
-          DB_PASSWORD_CHECK: ${{ secrets.DB_PASSWORD }}
-          DB_USER_CHECK: ${{ secrets.DB_USER }}
-          DB_NAME_CHECK: ${{ secrets.DB_NAME }}
+      - name: 🔍 Verify GitHub Secrets
         run: |
-          if [ -z "$DB_PASSWORD_CHECK" ] || [ -z "$DB_USER_CHECK" ] || [ -z "$DB_NAME_CHECK" ]; then
+          if [ -z "${{ secrets.DB_PASSWORD }}" ] || [ -z "${{ secrets.DB_USER }}" ] || [ -z "${{ secrets.DB_NAME }}" ]; then
             echo "❌ ERROR: Missing secrets!"
             exit 1
           fi
-          echo "✅ Secrets OK" [cite: 212, 213, 214]
-      
-      # ÉTAPE 2: Lancer les services avec docker-compose
+          echo "✅ Secrets OK"
+
       - name: Start services with docker compose
-        [cite_start]run: docker compose up -d [cite: 215]
+        run: docker compose up -d
       
-      # ÉTAPE 3: Attendre que les services soient prêts (DB + Web)
-      - name: Wait for services to start
-        [cite_start]run: sleep 5 [cite: 215]
+      - name: Wait for services
+        run: sleep 10
       
-      # ÉTAPE 4: Vérifier que l'application répond
-      - name: Verify web application is responding
-        [cite_start]run: curl -f http://localhost:3000/ || exit 1 [cite: 215, 216]
+      - name: Verify web application
+        run: curl -f http://localhost:3000/ || exit 1
       
-      # ÉTAPE 5: Vérifier la connexion à la base de données
-      - name: Check database connection
-        [cite_start]run: curl -f http://localhost:3000/ | grep -q "connected" || echo "Database initialized successfully" [cite: 216, 217]
-      
-      # ÉTAPE 6: Arrêter les services
       - name: Stop all services
-        [cite_start]run: docker compose down [cite: 217]
+        run: docker compose down
