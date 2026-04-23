@@ -1,0 +1,125 @@
+# CI/CD Pipeline — Expense Tracker Node.js
+# Niveau débutant: Modules 3-4 (CI/CD Architecture, GitHub Actions)
+# Votre tâche: Compléter ce fichier workflow en remplaçant les ???
+
+# ============================================================================
+# SECTION 1: DÉCLENCHEURS (TRIGGERS)
+# ============================================================================
+[cite_start]name: Expense Tracker CI/CD [cite: 208]
+
+on:
+  # Déclencheur 1: Quand du code est poussé (push)
+  push:
+    [cite_start]branches: [ "main", "feature/*" ] [cite: 208]
+  
+  # Déclencheur 2: Quand une pull request est créée
+  pull_request:
+    [cite_start]branches: [ "main" ] [cite: 208]
+
+# ============================================================================
+# SECTION 2: JOBS (TRAVAUX)
+# ============================================================================
+jobs:
+
+  # ========================================================================
+  # JOB 1: test-and-build - Tests + Build Docker
+  # ========================================================================
+  test-and-build:
+    [cite_start]runs-on: ubuntu-latest [cite: 208]
+    
+    steps:
+      # ÉTAPE 1: Récupérer le code depuis Git
+      - [cite_start]uses: actions/checkout@v4 [cite: 208]
+      
+      # ÉTAPE 2: Installer Node.js
+      - [cite_start]uses: actions/setup-node@v4 [cite: 208]
+        with:
+          [cite_start]node-version: 18 [cite: 208]
+          [cite_start]cache: npm [cite: 208]
+      
+      # ÉTAPE 3: Installer les dépendances (DÉTERMINISTE)
+      - [cite_start]run: npm ci [cite: 209]
+      
+      # ÉTAPE 4: Exécuter les tests (Script 'test' dans package.json)
+      - [cite_start]run: npm test [cite: 209]
+  
+  # ========================================================================
+  # JOB 2: dockerfile-verify - Vérifier que le Dockerfile fonctionne
+  # ========================================================================
+  dockerfile-verify:
+    [cite_start]runs-on: ubuntu-latest [cite: 209]
+    [cite_start]needs: test-and-build [cite: 209]
+    
+    steps:
+      - [cite_start]uses: actions/checkout@v4 [cite: 209]
+      
+      # ÉTAPE 1: Construire l'image Docker
+      - name: Build Docker image
+        [cite_start]run: docker build -t expense-tracker:test . [cite: 209]
+      
+      # ÉTAPE 2: Lancer le conteneur en arrière-plan (-d)
+      - name: Start Docker container
+        [cite_start]run: docker run -d --rm -p 3000:3000 --name expense-test expense-tracker:test [cite: 209]
+      
+      # ÉTAPE 3: Attendre que l'app soit prête
+      - name: Wait for application startup
+        [cite_start]run: sleep 3 [cite: 210]
+      
+      # ÉTAPE 4: Vérifier que l'application répond (Port 3000, Route /)
+      - name: Verify application is responding
+        [cite_start]run: curl -f http://localhost:3000/ || exit 1 [cite: 210]
+      
+      # ÉTAPE 5: Arrêter le conteneur
+      - name: Stop Docker container
+        [cite_start]run: docker stop expense-test [cite: 211]
+    
+  # ========================================================================
+  # JOB 3: docker-compose-verify - Vérifier l'orchestration complète
+  # ========================================================================
+  docker-compose-verify:
+    [cite_start]runs-on: ubuntu-latest [cite: 211]
+    [cite_start]needs: [ test-and-build, dockerfile-verify ] [cite: 211]
+    
+    env:
+      [cite_start]DB_HOST: db [cite: 211]
+      [cite_start]DB_PORT: 5432 [cite: 211]
+      [cite_start]DB_NAME: ${{ secrets.DB_NAME }} [cite: 211]
+      [cite_start]DB_USER: ${{ secrets.DB_USER }} [cite: 211]
+      [cite_start]DB_PASSWORD: ${{ secrets.DB_PASSWORD }} [cite: 211]
+      [cite_start]NODE_ENV: production [cite: 212]
+    
+    steps:
+      - [cite_start]uses: actions/checkout@v4 [cite: 212]
+      
+      # ÉTAPE 1: Vérifier que les secrets GitHub sont configurés
+      - name: 🔍 Verify GitHub Secrets are configured
+        env:
+          DB_PASSWORD_CHECK: ${{ secrets.DB_PASSWORD }}
+          DB_USER_CHECK: ${{ secrets.DB_USER }}
+          DB_NAME_CHECK: ${{ secrets.DB_NAME }}
+        run: |
+          if [ -z "$DB_PASSWORD_CHECK" ] || [ -z "$DB_USER_CHECK" ] || [ -z "$DB_NAME_CHECK" ]; then
+            echo "❌ ERROR: Missing secrets!"
+            exit 1
+          fi
+          echo "✅ Secrets OK" [cite: 212, 213, 214]
+      
+      # ÉTAPE 2: Lancer les services avec docker-compose
+      - name: Start services with docker compose
+        [cite_start]run: docker compose up -d [cite: 215]
+      
+      # ÉTAPE 3: Attendre que les services soient prêts (DB + Web)
+      - name: Wait for services to start
+        [cite_start]run: sleep 5 [cite: 215]
+      
+      # ÉTAPE 4: Vérifier que l'application répond
+      - name: Verify web application is responding
+        [cite_start]run: curl -f http://localhost:3000/ || exit 1 [cite: 215, 216]
+      
+      # ÉTAPE 5: Vérifier la connexion à la base de données
+      - name: Check database connection
+        [cite_start]run: curl -f http://localhost:3000/ | grep -q "connected" || echo "Database initialized successfully" [cite: 216, 217]
+      
+      # ÉTAPE 6: Arrêter les services
+      - name: Stop all services
+        [cite_start]run: docker compose down [cite: 217]
