@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+
+  # ============================
+  # Service Web (Node.js)
+  # ============================
+  web:
+    build:
+      context: .              # Dossier racine (où se trouve le Dockerfile)
+      dockerfile: Dockerfile  # Ton Dockerfile est dans skeletons/Dockerfile
+    container_name: expense-tracker-elendie
+    env_file:
+      - .env.docker
+    ports:
+      - "3000:3000"           # Port externe 3000 → interne 3000
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:${DB_PORT:-5432}/${DB_NAME:-expense_tracker}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-expense_tracker}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - expense_net
+
+  # ============================
+  # Service Base de données (PostgreSQL)
+  # ============================
+  db:
+    image: postgres:15
+    container_name: expense-tracker-db
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-expense_tracker}
+      POSTGRES_USER: ${DB_USER:-postgres}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - expense_net
+
+# ============================
+# Volumes persistants
+# ============================
+volumes:
+  db_data:
+    driver: local
+
+# ============================
+# Réseau personnalisé
+# ============================
+networks:
+  expense_net:
+    driver: bridge

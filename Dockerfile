@@ -14,14 +14,14 @@
 #   - Variante complet: Tout inclus (~900MB)
 #
 # Conseil pour débutants: Choisir la variante la plus légère pour commencer
-FROM ???
+FROM node:18-alpine
 
 # ========================================================================
 # TÂCHE 2: Répertoire de travail du conteneur
 # ========================================================================
 # C'est comme "cd" - tous les fichiers et commandes utiliseront ce dossier
 # Conseil: Utiliser un chemin absolu dans le conteneur, pas à la racine
-WORKDIR ???
+WORKDIR /app
 
 # ========================================================================
 # TÂCHE 3 & 4: Installer les dépendances (2 étapes)
@@ -29,12 +29,12 @@ WORKDIR ???
 # ÉTAPE 3: Copier les fichiers de dépendances
 # Quels fichiers définissent les dépendances Node.js?
 # Conseil: Dois-je copier package.json? Dois-je copier le lock file?
-COPY ???
+COPY package*.json ./
 
 # ÉTAPE 4: Installer les dépendances
 # Deux commandes disponibles: npm install vs npm ci
 # Conseil: Lequel utiliser dans Docker pour résultats déterministes?
-RUN ???
+RUN npm install
 
 # ========================================================================
 # TÂCHE 5: Copier le code source de l'application
@@ -46,7 +46,7 @@ RUN ???
 # Conseil: Structurez bien pour ne pas copier node_modules/ ou .git/
 #
 # Astuce: Un fichier .dockerignore permet de spécifier les fichiers à ignorer
-COPY ???
+COPY . .
 
 # ========================================================================
 # TÂCHE 6: Exposer le port
@@ -56,7 +56,7 @@ COPY ???
 #
 # Note: EXPOSE est informatif (pas obligatoire), mais bon pour la documentation conteneur
 # Le port réel est mappé dans docker-compose.yml
-EXPOSE ???
+EXPOSE 3000
 
 # ========================================================================
 # TÂCHE 7: Commande de démarrage du conteneur
@@ -64,7 +64,7 @@ EXPOSE ???
 # Que doit-il se passer quand le conteneur démarre?
 # Conseil: Regardez package.json → scripts pour voir les valeurs disponibles
 # Format: CMD ["commande", "arg1", "arg2", ...]
-CMD ???
+CMD ["npm", "start"]
 
 # ========================================================================
 # NOTES PÉDAGOGIQUES (de Module 5-6)

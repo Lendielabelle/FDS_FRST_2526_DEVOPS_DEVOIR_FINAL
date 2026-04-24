@@ -1,0 +1,40 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Elendie’s Expense Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Bienvenue sur Elendie’s Expense Tracker</h1>
+  <section id="summary">
+    <h2>Résumé des dépenses</h2>
+    <ul>
+      <li>Total des dépenses : 0</li>
+      <li>Nombre de dépenses : 0</li>
+      <li>Dépense moyenne : 0</li>
+      <li>Par catégorie : Food, Transport, Entertainment, Other</li>
+    </ul>
+  </section>
+  <section id="form">
+    <h2>Ajouter une dépense</h2>
+    <form action="/expenses" method="POST">
+      <label>Description : <input type="text" name="description" required></label><br>
+      <label>Montant : <input type="number" name="amount" min="1" required></label><br>
+      <label>Catégorie :
+        <select name="category">
+          <option>Food</option>
+          <option>Transport</option>
+          <option>Entertainment</option>
+          <option>Other</option>
+        </select>
+      </label><br>
+      <label>Date : <input type="date" name="date" required></label><br>
+      <button type="submit">Ajouter</button>
+    </form>
+  </section>
+  <footer>
+    <p>Projet DevOps réalisé par Elendie</p>
+  </footer>
+</body>
+</html>
